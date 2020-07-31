@@ -124,19 +124,17 @@ if __name__ == '__main__':
     leds = LEDStrip(58)
 
     camera = PiCamera()
-    camera.resolution = (64, 48)
+    camera.resolution = (640, 480)
     camera.framerate = 32
-    rawCapture = PiRGBArray(camera, size=(64, 48))
+    rawCapture = PiRGBArray(camera, size=(640, 480))
 
     time.sleep(0.1)
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
-        for i in range(58):
-            leds.set_color(i, image[20][20])
-        #for i, color in enumerate(color_picker.get_strip_colors(image)):
-        #    leds.set_color(i, color)
-            #leds.set_color(i, [252, 235, 3])
+        
+        for i, color in enumerate(color_picker.get_strip_colors(image)):
+            leds.set_color(i, color)
 
         # cv2.imshow("Frame", image)
         # key = cv2.waitKey(1) & 0xFF
