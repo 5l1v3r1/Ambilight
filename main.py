@@ -1,34 +1,36 @@
 import serial
 from time import sleep
-import thread
+from threading import Thread
 
 SERIAL_DEVICE = '/dev/ttyACM0'
 SERIAL_SPEED = 115200
-DELIMETTER = ord('\n') # tof!
-DELIMETTER_FIXER = 254
+DELIMETTER = ord('\n')
+DELIMETTER_FIXER = ord('\n') + 1 
 
 class LEDStrip:
     def __init__(self, count):
         self._serial = serial.Serial(SERIAL_DEVICE, SERIAL_SPEED)
         self._strip = [[0, 0, 0] for _ in range(count)]
-        self._fps = 10
-        thread.start_new_thread(self._update)
+        self._fps = 100
+        Thread(target=self._update).start()
 
     @property
     def length(self):
         return len(self._strip)
 
-    def _update():
+    def _update(self):
         speed = 1 # FIX BUG, slow start arduino to not stuck
         while True:
-            speed = speed * 2 if speed < self._fps else self._fps
+#            print(self._strip)
+            speed = speed * 1.1 if speed < self._fps else self._fps
             sleep(1 / speed)
             flatted_strip = sum(self._strip, [])
-            character_strip = map(lambda x: chr(x) if x != 255 else chr(DELIMETTER_FIXER), flatted_strip)
-            self.serial.write(''.join(character_strip)) + DELIMETTER)
+            filtred_strip = [i if i != DELIMETTER else DELIMETTER_FIXER for i in flatted_strip]
+            self._serial.write(bytearray(filtred_strip) + b'\n')
 
     def set_color(self, i, color):
-        self.strip[i] = color
+        # BRG
+        self._strip[i] = [color[0], color[2], color[1]]
 
 
 import numpy as np
@@ -108,24 +110,33 @@ class ColorPicker:
         tv_image = self._get_flat_tv(image)
         return [self._find_main_color_of_point(tv_image, point) for point in self.strip_points]
 
+
+
+import numpy as np
+import cv2
+from rpi_ws281x import PixelStrip, Color
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+
 if __name__ == '__main__':
     color_picker = ColorPicker()
     leds = LEDStrip(58)
 
     camera = PiCamera()
-    camera.resolution = (640, 480)
+    camera.resolution = (64, 48)
     camera.framerate = 32
-    rawCapture = PiRGBArray(camera, size=(640, 480))
+    rawCapture = PiRGBArray(camera, size=(64, 48))
 
     time.sleep(0.1)
 
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
-
-        for i, color in enumerate(color_picker.get_strip_colors(image)):
-            # leds.set_color(i, color, update=False)
-            leds.set_color(i, [252, 235, 3])
-        leds.update()
+        for i in range(58):
+            leds.set_color(i, image[20][20])
+        #for i, color in enumerate(color_picker.get_strip_colors(image)):
+        #    leds.set_color(i, color)
+            #leds.set_color(i, [252, 235, 3])
 
         # cv2.imshow("Frame", image)
         # key = cv2.waitKey(1) & 0xFF
