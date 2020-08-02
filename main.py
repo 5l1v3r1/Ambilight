@@ -2,14 +2,14 @@ import serial
 from time import sleep
 from threading import Thread
 
-SERIAL_DEVICE = '/dev/ttyACM0'
-SERIAL_SPEED = 115200
+SERIAL_DEVICE = '/dev/rfcomm0' #'/dev/ttyACM0'
+SERIAL_SPEED = 38400
 DELIMETTER = ord('\n')
 DELIMETTER_FIXER = ord('\n') + 1 
 
 class LEDStrip:
     def __init__(self, count):
-        self._serial = serial.Serial(SERIAL_DEVICE, SERIAL_SPEED)
+        self._serial = serial.Serial(port=SERIAL_DEVICE, baudrate=SERIAL_SPEED, bytesize=8, parity='E', stopbits=2)
         self._strip = [[0, 0, 0] for _ in range(count)]
         self._fps = 100
         Thread(target=self._update).start()
@@ -119,9 +119,10 @@ from picamera.array import PiRGBArray
 from picamera import PiCamera
 import time
 
+
 if __name__ == '__main__':
     color_picker = ColorPicker()
-    leds = LEDStrip(58)
+    leds = LEDStrip(59)
 
     camera = PiCamera()
     camera.resolution = (640, 480)
@@ -133,13 +134,16 @@ if __name__ == '__main__':
     for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
         image = frame.array
         
-        for i, color in enumerate(color_picker.get_strip_colors(image)):
-            leds.set_color(i, color)
+        #for i in range(59):
+        #    leds.set_color(i, color[s % 9])
+        
+        #for i, color in enumerate(color_picker.get_strip_colors(image)):
+        #    leds.set_color(i, color)
 
-        # cv2.imshow("Frame", image)
-        # key = cv2.waitKey(1) & 0xFF
+        cv2.imshow("Frame", image)
+        key = cv2.waitKey(1) & 0xFF
         rawCapture.truncate(0)
-        # if key == ord("q"):
-        #     break
+        if key == ord("q"):
+             break
 
     cv2.destroyAllWindows()
